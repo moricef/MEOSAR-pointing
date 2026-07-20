@@ -213,6 +213,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--pointing", action="store_true", help="operator pointing table")
     parser.add_argument("--target", default=None, help="single satellite: C/S ID, NORAD ID, or name")
     parser.add_argument("--clear", action="store_true", help="clear terminal before each watch update")
+    parser.add_argument("--engineering", action="store_true", help="show geometry and DOP diagnostics")
     parser.add_argument("--json", action="store_true", help="emit machine-readable JSON")
     parser.add_argument("--no-set-time", action="store_true", help="skip time-to-set calculation")
     parser.add_argument(
@@ -542,7 +543,7 @@ def render_text(
     print()
     for row in rows:
         status = "" if row.info.status == "SAR" else f" {row.info.status}"
-        geo_mark = "*" if row.el_deg >= args.geom_min_el else " "
+        geo_mark = "*" if args.engineering and row.el_deg >= args.geom_min_el else " "
         print(
             f"{geo_mark} {row.info.constellation:<8} {row.info.cs_id:>3}{status:<3} "
             f"{row.info.label:<15} Az {row.az_deg:6.1f}  El {row.el_deg:5.1f}  "
@@ -551,12 +552,13 @@ def render_text(
 
     print()
     print(f"MEOSAR visible >= {args.min_el:.1f} deg: {len(rows)}")
-    print(
-        f"Geometry >= {args.geom_min_el:.1f} deg: {geometry.grade}  "
-        f"count={geometry.count}  az_span={geometry.az_span_deg:.0f} deg  "
-        f"largest_gap={geometry.largest_gap_deg:.0f} deg  avg_el={geometry.avg_el_deg:.1f} deg"
-    )
-    print(f"{format_dop(geometry.dop)}")
+    if args.engineering:
+        print(
+            f"Geometry >= {args.geom_min_el:.1f} deg: {geometry.grade}  "
+            f"count={geometry.count}  az_span={geometry.az_span_deg:.0f} deg  "
+            f"largest_gap={geometry.largest_gap_deg:.0f} deg  avg_el={geometry.avg_el_deg:.1f} deg"
+        )
+        print(f"{format_dop(geometry.dop)}")
 
 
 def render_pointing(
@@ -609,12 +611,13 @@ def render_compact(
     geometry: GeometrySummary,
     args: argparse.Namespace,
 ) -> None:
-    pdop_field = f"{geometry.dop.pdop:.1f}" if geometry.dop else "--"
-    header = (
-        f"{tstamp:%H:%M:%S}Z {qth_name}  "
-        f"vis={len(rows)} geom={geometry.grade}/{geometry.count} "
-        f"gap={geometry.largest_gap_deg:.0f} pdop={pdop_field}"
-    )
+    header = f"{tstamp:%H:%M:%S}Z {qth_name}  vis={len(rows)}"
+    if args.engineering:
+        pdop_field = f"{geometry.dop.pdop:.1f}" if geometry.dop else "--"
+        header += (
+            f" geom={geometry.grade}/{geometry.count} "
+            f"gap={geometry.largest_gap_deg:.0f} pdop={pdop_field}"
+        )
     print(header)
     for row in rows:
         if row.el_deg < args.geom_min_el and args.sort == "elevation" and len(rows) > 12:

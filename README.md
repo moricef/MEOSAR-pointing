@@ -75,8 +75,34 @@ Latitude/longitude can also be used:
 - `--clear`: clear the terminal before each refresh.
 - `--min-el DEG`: antenna mask / minimum elevation.
 - `--compact`: compact terminal output.
+- `--engineering`: show constellation geometry and DOP diagnostics.
 - `--json`: machine-readable output.
 - `--refresh`: force TLE download.
+
+## Engineering Output
+
+Normal terminal output is focused on antenna pointing and does not show
+constellation diagnostics.
+
+For engineering checks:
+
+```bash
+./meosar_pointing.py --qth F4KLO --min-el 10 --engineering
+```
+
+This adds the geometry summary and DOP values:
+
+```text
+Geometry >= 15.0 deg: good  count=13  az_span=284 deg  largest_gap=76 deg  avg_el=38.9 deg
+DOP pdop=1.7 hdop=0.9 vdop=1.4 gdop=1.9 tdop=0.9
+```
+
+The JSON output always includes the geometry block so that other programs can
+consume it:
+
+```bash
+./meosar_pointing.py --qth F4KLO --min-el 10 --json
+```
 
 ## Data Sources
 
@@ -96,5 +122,4 @@ cache when possible.
 ## Notes
 
 The default display is meant for antenna pointing. Advanced geometry and DOP
-information is available in the detailed and JSON output, but it is not needed
-for normal manual pointing.
+information is intentionally hidden unless `--engineering` or `--json` is used.
