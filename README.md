@@ -80,7 +80,10 @@ GPS327 az=124 el=69 ↓ dop=-1513Hz GPS BIIF-4
 GPS310 az=085 el=59 ↓ dop=-384Hz GPS IIF-11
 ```
 
-## Stations
+## Stations and QTH
+
+`F4KLO` and `JN02QX` are built-in shortcuts only. Any Maidenhead locator or
+latitude/longitude position can be used.
 
 Built-in presets:
 
