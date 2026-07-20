@@ -160,6 +160,15 @@ TLE files are cached locally under `~/.cache/meosar-pointing` by default.
 If CelesTrak is temporarily unavailable, the tool keeps using the existing
 cache when possible.
 
+## Validation
+
+The embedded SAR satellite table is checked against a versioned reference CSV
+derived from the Cospas-Sarsat MEOSAR satellite identification parameters:
+
+```bash
+python3 tests/test_satellite_table.py
+```
+
 ## Notes
 
 The default display is meant for antenna pointing. Advanced geometry and DOP
