@@ -200,6 +200,7 @@ derived from the Cospas-Sarsat MEOSAR satellite identification parameters:
 
 ```bash
 python3 tests/test_satellite_table.py
+python3 tests/test_core_functions.py
 ```
 
 ## Notes
