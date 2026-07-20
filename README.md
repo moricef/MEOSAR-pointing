@@ -97,6 +97,10 @@ Geometry >= 15.0 deg: good  count=13  az_span=284 deg  largest_gap=76 deg  avg_e
 DOP pdop=1.7 hdop=0.9 vdop=1.4 gdop=1.9 tdop=0.9
 ```
 
+The DOP values are local line-of-sight geometry indicators derived from the
+visible MEOSAR satellites. They are useful for engineering comparison between
+sky configurations, but they are not operational GNSS receiver PDOP values.
+
 The JSON output always includes the geometry block so that other programs can
 consume it:
 

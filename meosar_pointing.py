@@ -571,12 +571,16 @@ def render_pointing(
     print(f"{tstamp:%Y-%m-%d %H:%M:%S} UTC")
     print(f"Antenna mask: {args.min_el:.1f} deg")
     print()
-    print(f"{'Satellite':<15} {'C/S':>5} {'Const':<8} {'Az':>7} {'El':>7} {'Trend':>5} {'Visible':>8}")
+    print(
+        f"{'Satellite':<15} {'C/S':>5} {'Const':<8} {'Az':>7} {'El':>7} "
+        f"{'Trend':>5} {'Visible':>8} {'Set UTC':>7}"
+    )
     for row in rows:
         visible = format_duration(row.set_seconds) if row.el_deg >= args.min_el else "below"
         print(
             f"{row.info.label:<15} {row.info.cs_id:>5} {constellation_abbrev(row.info.constellation):<8} "
-            f"{row.az_deg:6.1f} {row.el_deg:6.1f} {trend_symbol(row.trend):>5} {visible:>8}"
+            f"{row.az_deg:6.1f} {row.el_deg:6.1f} {trend_symbol(row.trend):>5} "
+            f"{visible:>8} {format_set_utc(row.set_utc):>7}"
         )
 
 
