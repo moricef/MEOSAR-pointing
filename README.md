@@ -33,10 +33,29 @@ Track one satellite by Cospas-Sarsat ID:
 ./meosar_pointing.py --qth F4KLO --min-el 10 --target 426 --watch 30 --clear
 ```
 
-Example target output:
+## Example Output
+
+Pointing table:
 
 ```text
-MEOSAR TARGET - F4KLO
+MEOSAR POINTING - F4KLO (Radio Club F4KLO, JN18EV64NN)
+2026-07-20 06:22:15 UTC
+Antenna mask: 10.0 deg
+Downlink frequency: 1544.100 MHz
+
+Satellite         C/S Const         Az      El Trend   Doppler  Visible Set UTC
+GSAT0222          433 GAL        50.3   73.0     ↓     -815     3h25  09:47Z
+GPS IIF-10        308 GPS       293.3   71.0     ↑     +873     3h22  09:43Z
+GPS BIIF-4        327 GPS       123.9   69.2     ↓    -1513     2h13  08:35Z
+GPS IIF-11        310 GPS        84.8   59.3     ↓     -384     2h18  08:40Z
+GSAT0218          431 GAL       196.8   51.2     ↓    -1950     1h47  08:09Z
+```
+
+Single target:
+
+```text
+MEOSAR TARGET - F4KLO (Radio Club F4KLO, JN18EV64NN)
+2026-07-20 06:22:15 UTC
 
 GSAT0203 - Galileo C/S 426
 Prediction: Satellite → Station downlink only
@@ -44,10 +63,21 @@ Prediction: Satellite → Station downlink only
 Azimuth:        60.1 deg
 Elevation:      21.2 deg  ↓
 Range:         26704 km
+Range rate:    487.5 m/s
 Doppler:       -2511 Hz @ 1544.100 MHz
 Set:          07:00Z  (38m)
 Mask:           10.0 deg
 Status:      visible
+```
+
+Compact engineering view:
+
+```text
+06:22:15Z F4KLO (Radio Club F4KLO, JN18EV64NN)  vis=20 geom=good/16 gap=76 pdop=1.3
+GAL433 az=050 el=73 ↓ dop=-815Hz GSAT0222
+GPS308 az=293 el=71 ↑ dop=+873Hz GPS IIF-10
+GPS327 az=124 el=69 ↓ dop=-1513Hz GPS BIIF-4
+GPS310 az=085 el=59 ↓ dop=-384Hz GPS IIF-11
 ```
 
 ## Stations
