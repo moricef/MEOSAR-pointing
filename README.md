@@ -43,7 +43,7 @@ GSAT0203 - Galileo C/S 426
 Azimuth:        60.1 deg
 Elevation:      21.2 deg  ↓
 Range:         26704 km
-Doppler:       -2512 Hz @ 1544.500 MHz
+Doppler:       -2511 Hz @ 1544.100 MHz
 Set:          07:00Z  (38m)
 Mask:           10.0 deg
 Status:      visible
@@ -84,16 +84,17 @@ Latitude/longitude can also be used:
 ## 1544 MHz Doppler
 
 The tool predicts the downlink Doppler from the satellite range rate. The
-default frequency is `1544.5 MHz`, suitable for MEOSAR downlink checks:
+default frequency is `1544.1 MHz`, matching the Galileo SAR downlink commonly
+used for F4KLO checks:
 
 ```bash
 ./meosar_pointing.py --qth F4KLO --min-el 10 --target 426 --utc 2026-07-20T06:22:15Z
 ```
 
-For another receive frequency:
+For another receive frequency, for example `1544.5 MHz`:
 
 ```bash
-./meosar_pointing.py --qth F4KLO --target 426 --doppler-freq-mhz 1544.8
+./meosar_pointing.py --qth F4KLO --target 426 --doppler-freq-mhz 1544.5
 ```
 
 The sign convention is receiver-oriented: a positive range rate means the
@@ -102,6 +103,11 @@ the satellite-to-station downlink Doppler at the selected receive frequency.
 Comparing a measured carrier offset with this prediction leaves the residual
 station oscillator error plus any uplink/transponder contribution present in
 the received signal.
+
+For example, if a Galileo downlink capture is measured at `-13200 Hz` while the
+predicted downlink Doppler is around `-2500 Hz`, the remaining offset is mostly
+receiver oscillator error. The beacon-to-satellite uplink Doppler depends on
+the beacon location and is not included here.
 
 ## Engineering Output
 
