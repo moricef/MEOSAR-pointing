@@ -39,6 +39,7 @@ Example target output:
 MEOSAR TARGET - F4KLO
 
 GSAT0203 - Galileo C/S 426
+Prediction: Satellite → Station downlink only
 
 Azimuth:        60.1 deg
 Elevation:      21.2 deg  ↓
@@ -75,7 +76,7 @@ Latitude/longitude can also be used:
 - `--watch SECONDS`: refresh periodically.
 - `--clear`: clear the terminal before each refresh.
 - `--min-el DEG`: antenna mask / minimum elevation.
-- `--doppler-freq-mhz MHz`: receive frequency used for Doppler prediction.
+- `--downlink-mhz MHz`: observed downlink frequency used for Doppler prediction.
 - `--compact`: compact terminal output.
 - `--engineering`: show constellation geometry and DOP diagnostics.
 - `--json`: machine-readable output.
@@ -94,7 +95,7 @@ used for F4KLO checks:
 For another receive frequency, for example `1544.5 MHz`:
 
 ```bash
-./meosar_pointing.py --qth F4KLO --target 426 --doppler-freq-mhz 1544.5
+./meosar_pointing.py --qth F4KLO --target 426 --downlink-mhz 1544.5
 ```
 
 The sign convention is receiver-oriented: a positive range rate means the
@@ -103,6 +104,9 @@ the satellite-to-station downlink Doppler at the selected receive frequency.
 Comparing a measured carrier offset with this prediction leaves the residual
 station oscillator error plus any uplink/transponder contribution present in
 the received signal.
+
+The older option name `--doppler-freq-mhz` remains accepted for compatibility,
+but `--downlink-mhz` is the preferred spelling.
 
 For example, if a Galileo downlink capture is measured at `-13200 Hz` while the
 predicted downlink Doppler is around `-2500 Hz`, the remaining offset is mostly

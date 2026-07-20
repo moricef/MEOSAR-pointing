@@ -231,10 +231,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--clear", action="store_true", help="clear terminal before each watch update")
     parser.add_argument("--engineering", action="store_true", help="show geometry and DOP diagnostics")
     parser.add_argument(
-        "--doppler-freq-mhz",
+        "--downlink-mhz",
+        dest="downlink_mhz",
         type=float,
         default=DEFAULT_DOWNLINK_MHZ,
-        help="receive frequency used for Doppler prediction",
+        help="observed downlink frequency used for Doppler prediction",
+    )
+    parser.add_argument(
+        "--doppler-freq-mhz",
+        dest="downlink_mhz",
+        type=float,
+        help=argparse.SUPPRESS,
     )
     parser.add_argument("--json", action="store_true", help="emit machine-readable JSON")
     parser.add_argument("--no-set-time", action="store_true", help="skip time-to-set calculation")
@@ -612,7 +619,7 @@ def render_pointing(
     print(f"MEOSAR POINTING - {qth_name}")
     print(f"{tstamp:%Y-%m-%d %H:%M:%S} UTC")
     print(f"Antenna mask: {args.min_el:.1f} deg")
-    print(f"Doppler frequency: {args.doppler_freq_mhz:.3f} MHz")
+    print(f"Downlink frequency: {args.downlink_mhz:.3f} MHz")
     print()
     print(
         f"{'Satellite':<15} {'C/S':>5} {'Const':<8} {'Az':>7} {'El':>7} "
@@ -642,12 +649,13 @@ def render_target(
     print(f"{tstamp:%Y-%m-%d %H:%M:%S} UTC")
     print()
     print(f"{row.info.label} - {row.info.constellation} C/S {row.info.cs_id}")
+    print("Prediction: Satellite → Station downlink only")
     print()
     print(f"Azimuth:     {row.az_deg:7.1f} deg")
     print(f"Elevation:   {row.el_deg:7.1f} deg  {trend_symbol(row.trend)}")
     print(f"Range:       {row.range_km:7.0f} km")
     print(f"Range rate:  {row.range_rate_mps:7.1f} m/s")
-    print(f"Doppler:     {row.doppler_hz:+7.0f} Hz @ {args.doppler_freq_mhz:.3f} MHz")
+    print(f"Doppler:     {row.doppler_hz:+7.0f} Hz @ {args.downlink_mhz:.3f} MHz")
     print(f"Set:         {format_set_utc(row.set_utc):>7}  ({format_duration(row.set_seconds)})")
     print(f"Mask:        {args.min_el:7.1f} deg")
     print(f"Status:      {'visible' if visible else 'below mask'}")
@@ -694,7 +702,8 @@ def render_json(
         "lat": lat,
         "lon": lon,
         "min_el_deg": args.min_el,
-        "doppler_frequency_mhz": args.doppler_freq_mhz,
+        "downlink_mhz": args.downlink_mhz,
+        "doppler_frequency_mhz": args.downlink_mhz,
         "geometry_min_el_deg": args.geom_min_el,
         "geometry": {
             "grade": geometry.grade,
@@ -749,7 +758,7 @@ def render_once(args: argparse.Namespace) -> None:
         alt, az, distance = topocentric.altaz()
         if alt.degrees >= args.min_el or is_target:
             range_rate_mps, doppler_hz = doppler_at(
-                satellite, observer, ts, tstamp, args.doppler_freq_mhz
+                satellite, observer, ts, tstamp, args.downlink_mhz
             )
             set_seconds = None
             set_utc = None
