@@ -43,6 +43,7 @@ GSAT0203 - Galileo C/S 426
 Azimuth:        60.1 deg
 Elevation:      21.2 deg  ↓
 Range:         26704 km
+Doppler:       -2512 Hz @ 1544.500 MHz
 Set:          07:00Z  (38m)
 Mask:           10.0 deg
 Status:      visible
@@ -74,10 +75,33 @@ Latitude/longitude can also be used:
 - `--watch SECONDS`: refresh periodically.
 - `--clear`: clear the terminal before each refresh.
 - `--min-el DEG`: antenna mask / minimum elevation.
+- `--doppler-freq-mhz MHz`: receive frequency used for Doppler prediction.
 - `--compact`: compact terminal output.
 - `--engineering`: show constellation geometry and DOP diagnostics.
 - `--json`: machine-readable output.
 - `--refresh`: force TLE download.
+
+## 1544 MHz Doppler
+
+The tool predicts the downlink Doppler from the satellite range rate. The
+default frequency is `1544.5 MHz`, suitable for MEOSAR downlink checks:
+
+```bash
+./meosar_pointing.py --qth F4KLO --min-el 10 --target 426 --utc 2026-07-20T06:22:15Z
+```
+
+For another receive frequency:
+
+```bash
+./meosar_pointing.py --qth F4KLO --target 426 --doppler-freq-mhz 1544.8
+```
+
+The sign convention is receiver-oriented: a positive range rate means the
+satellite is moving away, so the received Doppler is negative. This predicts
+the satellite-to-station downlink Doppler at the selected receive frequency.
+Comparing a measured carrier offset with this prediction leaves the residual
+station oscillator error plus any uplink/transponder contribution present in
+the received signal.
 
 ## Engineering Output
 
@@ -115,9 +139,12 @@ The tool downloads current GNSS TLEs from CelesTrak:
 - GPS operational satellites
 - Galileo
 - GLONASS operational satellites
+- BeiDou
 
 It then filters them with an internal list of Cospas-Sarsat MEOSAR-capable
-satellites, matched by NORAD catalog number.
+satellites, matched by NORAD catalog number. This list was checked against
+`MEOSAR_Satellite_Identification_Parameters_v2026-06-05.xlsx` from the
+Cospas-Sarsat MEOSAR satellite identification parameters.
 
 TLE files are cached locally under `~/.cache/meosar-pointing` by default.
 If CelesTrak is temporarily unavailable, the tool keeps using the existing

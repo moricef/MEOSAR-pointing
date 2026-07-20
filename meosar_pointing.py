@@ -29,11 +29,15 @@ EarthSatellite = None
 load = None
 wgs84 = None
 
+SPEED_OF_LIGHT_MPS = 299_792_458.0
+DEFAULT_DOWNLINK_MHZ = 1544.5
+
 
 CELESTRAK_GROUPS = {
     "gps": "https://celestrak.org/NORAD/elements/gp.php?GROUP=gps-ops&FORMAT=tle",
     "galileo": "https://celestrak.org/NORAD/elements/gp.php?GROUP=galileo&FORMAT=tle",
     "glonass": "https://celestrak.org/NORAD/elements/gp.php?GROUP=glo-ops&FORMAT=tle",
+    "beidou": "https://celestrak.org/NORAD/elements/gp.php?GROUP=beidou&FORMAT=tle",
 }
 
 
@@ -64,6 +68,8 @@ class VisibleSatellite:
     set_seconds: int | None = None
     set_utc: dt.datetime | None = None
     trend: str = "level"
+    range_rate_mps: float = 0.0
+    doppler_hz: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -139,12 +145,22 @@ SAR_SATELLITES = [
     SarSatellite(430, 40890, "Galileo", "GSAT0206"),
     SarSatellite(431, 43058, "Galileo", "GSAT0218"),
     SarSatellite(432, 67162, "Galileo", "GSAT0234", "UT"),
+    SarSatellite(433, 43565, "Galileo", "GSAT0222"),
+    SarSatellite(434, 49809, "Galileo", "GSAT0223"),
+    SarSatellite(436, 43566, "Galileo", "GSAT0219"),
     # GLONASS SAR. 501 is decommissioned and omitted.
     SarSatellite(502, 40315, "GLONASS", "Glonass-K1-#2"),
     SarSatellite(503, 46805, "GLONASS", "Glonass-K1-#3"),
     SarSatellite(504, 52984, "GLONASS", "Glonass-K1-#4"),
     SarSatellite(505, 57517, "GLONASS", "Glonass-K2-#1"),
     SarSatellite(506, 63130, "GLONASS", "Glonass-K2-#2"),
+    # BDS SAR entries from C/S MEOSAR satellite identification parameters.
+    SarSatellite(631, 44793, "BDS", "BD-3 M22"),
+    SarSatellite(632, 43622, "BDS", "BD-3 M13"),
+    SarSatellite(633, 43623, "BDS", "BD-3 M14"),
+    SarSatellite(638, 44794, "BDS", "BD-3 M21"),
+    SarSatellite(639, 44543, "BDS", "BD-3 M23"),
+    SarSatellite(640, 44542, "BDS", "BD-3 M24"),
 ]
 
 
@@ -214,6 +230,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--target", default=None, help="single satellite: C/S ID, NORAD ID, or name")
     parser.add_argument("--clear", action="store_true", help="clear terminal before each watch update")
     parser.add_argument("--engineering", action="store_true", help="show geometry and DOP diagnostics")
+    parser.add_argument(
+        "--doppler-freq-mhz",
+        type=float,
+        default=DEFAULT_DOWNLINK_MHZ,
+        help="receive frequency used for Doppler prediction",
+    )
     parser.add_argument("--json", action="store_true", help="emit machine-readable JSON")
     parser.add_argument("--no-set-time", action="store_true", help="skip time-to-set calculation")
     parser.add_argument(
@@ -224,7 +246,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--constellation",
-        choices=("all", "gps", "galileo", "glonass"),
+        choices=("all", "gps", "galileo", "glonass", "bds"),
         default="all",
         help="constellation filter",
     )
@@ -377,6 +399,23 @@ def trend_at(satellite, observer, ts, start: dt.datetime) -> str:
     return "level"
 
 
+def doppler_at(
+    satellite,
+    observer,
+    ts,
+    start: dt.datetime,
+    frequency_mhz: float,
+    step_seconds: float = 1.0,
+) -> tuple[float, float]:
+    before = ts.from_datetime(start - dt.timedelta(seconds=step_seconds))
+    after = ts.from_datetime(start + dt.timedelta(seconds=step_seconds))
+    _alt_before, _az_before, distance_before = (satellite - observer).at(before).altaz()
+    _alt_after, _az_after, distance_after = (satellite - observer).at(after).altaz()
+    range_rate_mps = (distance_after.km - distance_before.km) * 1000.0 / (2.0 * step_seconds)
+    doppler_hz = -(range_rate_mps / SPEED_OF_LIGHT_MPS) * frequency_mhz * 1_000_000.0
+    return range_rate_mps, doppler_hz
+
+
 def sort_visible(rows: list[VisibleSatellite], sort_mode: str) -> None:
     if sort_mode == "constellation":
         rows.sort(key=lambda row: (row.info.constellation, -row.el_deg, row.info.cs_id))
@@ -490,6 +529,8 @@ def visible_to_dict(row: VisibleSatellite) -> dict[str, object]:
         "az_deg": round(row.az_deg, 3),
         "el_deg": round(row.el_deg, 3),
         "range_km": round(row.range_km, 1),
+        "range_rate_mps": round(row.range_rate_mps, 3),
+        "doppler_hz": round(row.doppler_hz, 1),
         "set_seconds": row.set_seconds,
         "set_utc": row.set_utc.isoformat().replace("+00:00", "Z") if row.set_utc else None,
         "trend": row.trend,
@@ -513,6 +554,7 @@ def constellation_abbrev(name: str) -> str:
         "GPS": "GPS",
         "Galileo": "GAL",
         "GLONASS": "GLO",
+        "BDS": "BDS",
     }.get(name, name[:3].upper())
 
 
@@ -570,17 +612,18 @@ def render_pointing(
     print(f"MEOSAR POINTING - {qth_name}")
     print(f"{tstamp:%Y-%m-%d %H:%M:%S} UTC")
     print(f"Antenna mask: {args.min_el:.1f} deg")
+    print(f"Doppler frequency: {args.doppler_freq_mhz:.3f} MHz")
     print()
     print(
         f"{'Satellite':<15} {'C/S':>5} {'Const':<8} {'Az':>7} {'El':>7} "
-        f"{'Trend':>5} {'Visible':>8} {'Set UTC':>7}"
+        f"{'Trend':>5} {'Doppler':>9} {'Visible':>8} {'Set UTC':>7}"
     )
     for row in rows:
         visible = format_duration(row.set_seconds) if row.el_deg >= args.min_el else "below"
         print(
             f"{row.info.label:<15} {row.info.cs_id:>5} {constellation_abbrev(row.info.constellation):<8} "
             f"{row.az_deg:6.1f} {row.el_deg:6.1f} {trend_symbol(row.trend):>5} "
-            f"{visible:>8} {format_set_utc(row.set_utc):>7}"
+            f"{row.doppler_hz:+8.0f} {visible:>8} {format_set_utc(row.set_utc):>7}"
         )
 
 
@@ -603,6 +646,8 @@ def render_target(
     print(f"Azimuth:     {row.az_deg:7.1f} deg")
     print(f"Elevation:   {row.el_deg:7.1f} deg  {trend_symbol(row.trend)}")
     print(f"Range:       {row.range_km:7.0f} km")
+    print(f"Range rate:  {row.range_rate_mps:7.1f} m/s")
+    print(f"Doppler:     {row.doppler_hz:+7.0f} Hz @ {args.doppler_freq_mhz:.3f} MHz")
     print(f"Set:         {format_set_utc(row.set_utc):>7}  ({format_duration(row.set_seconds)})")
     print(f"Mask:        {args.min_el:7.1f} deg")
     print(f"Status:      {'visible' if visible else 'below mask'}")
@@ -630,7 +675,7 @@ def render_compact(
         print(
             f"{constellation_abbrev(row.info.constellation)}{row.info.cs_id:03d} "
             f"az={row.az_deg:03.0f} el={row.el_deg:02.0f}"
-            f" {trend_symbol(row.trend)}{set_field} {row.info.label}"
+            f" {trend_symbol(row.trend)} dop={row.doppler_hz:+.0f}Hz{set_field} {row.info.label}"
         )
 
 
@@ -649,6 +694,7 @@ def render_json(
         "lat": lat,
         "lon": lon,
         "min_el_deg": args.min_el,
+        "doppler_frequency_mhz": args.doppler_freq_mhz,
         "geometry_min_el_deg": args.geom_min_el,
         "geometry": {
             "grade": geometry.grade,
@@ -702,6 +748,9 @@ def render_once(args: argparse.Namespace) -> None:
         topocentric = difference.at(t)
         alt, az, distance = topocentric.altaz()
         if alt.degrees >= args.min_el or is_target:
+            range_rate_mps, doppler_hz = doppler_at(
+                satellite, observer, ts, tstamp, args.doppler_freq_mhz
+            )
             set_seconds = None
             set_utc = None
             if not args.no_set_time and alt.degrees >= args.min_el:
@@ -716,6 +765,8 @@ def render_once(args: argparse.Namespace) -> None:
                     set_seconds=set_seconds,
                     set_utc=set_utc,
                     trend=trend_at(satellite, observer, ts, tstamp),
+                    range_rate_mps=range_rate_mps,
+                    doppler_hz=doppler_hz,
                 )
             )
 
